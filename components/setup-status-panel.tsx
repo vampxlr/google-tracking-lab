@@ -7,11 +7,17 @@ import { Badge } from '@/components/ui/badge'
 
 interface SetupStatus {
   configured: boolean
+  clientConfigured: boolean
+  serverConfigured: boolean
   measurementId?: string
 }
 
 export function SetupStatusPanel() {
-  const [status, setStatus] = React.useState<SetupStatus>({ configured: false })
+  const [status, setStatus] = React.useState<SetupStatus>({ 
+    configured: false,
+    clientConfigured: false,
+    serverConfigured: false
+  })
   const [isLoading, setIsLoading] = React.useState(true)
   const [testsRun, setTestsRun] = React.useState(false)
 
@@ -40,15 +46,19 @@ export function SetupStatusPanel() {
     let completed = 0
     let total = 3
 
-    if (status.configured) completed += 2 // GA4 is worth 2 points (client + server)
+    // Client-side tracking (gtag.js)
+    if (status.clientConfigured) completed += 1
+    // Server-side tracking (Measurement Protocol)
+    if (status.serverConfigured) completed += 1
+    // Tests run
     if (testsRun) completed += 1
 
     return Math.round((completed / total) * 100)
   }
 
   const completion = calculateCompletion()
-  const hasGtagJS = typeof window !== 'undefined' && status.configured
-  const hasMeasurementProtocol = status.configured
+  const hasGtagJS = status.clientConfigured
+  const hasMeasurementProtocol = status.serverConfigured
 
   if (isLoading) {
     return (
@@ -203,23 +213,39 @@ export function SetupStatusPanel() {
       </div>
 
       {/* Next Step */}
-      {!status.configured && (
+      {!status.clientConfigured && (
         <div className="mt-6 glass rounded-xl p-4 border border-[#4285F4]/20">
           <div className="flex items-start gap-3">
             <ArrowRight className="h-5 w-5 text-[#4285F4] flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-mono text-sm font-semibold text-[#4285F4] mb-1">
-                Next: Configure GA4 Credentials
+                Next: Add GA4 Measurement ID
               </p>
               <p className="text-xs text-[#8b949e]">
-                Add your GA4 Measurement ID and API Secret to get started
+                Add NEXT_PUBLIC_GA4_MEASUREMENT_ID to your .env file
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {status.configured && !testsRun && (
+      {status.clientConfigured && !status.serverConfigured && (
+        <div className="mt-6 glass rounded-xl p-4 border border-[#ff006e]/20">
+          <div className="flex items-start gap-3">
+            <ArrowRight className="h-5 w-5 text-[#ff006e] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-mono text-sm font-semibold text-[#ff006e] mb-1">
+                Next: Add API Secret (Optional)
+              </p>
+              <p className="text-xs text-[#8b949e]">
+                Add GA4_API_SECRET for server-side tracking via Measurement Protocol
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {status.clientConfigured && !testsRun && (
         <div className="mt-6 glass rounded-xl p-4 border border-[#FF6D00]/20">
           <div className="flex items-start gap-3">
             <ArrowRight className="h-5 w-5 text-[#FF6D00] flex-shrink-0 mt-0.5" />
@@ -235,7 +261,7 @@ export function SetupStatusPanel() {
         </div>
       )}
 
-      {status.configured && testsRun && (
+      {status.serverConfigured && testsRun && (
         <div className="mt-6 glass rounded-xl p-4 border border-[#34A853]/20">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-[#34A853] flex-shrink-0 mt-0.5" />
@@ -244,7 +270,7 @@ export function SetupStatusPanel() {
                 Setup Complete! 🎉
               </p>
               <p className="text-xs text-[#8b949e]">
-                Your tracking lab is ready. Explore the documentation to learn more.
+                Full setup complete! Both client & server tracking are ready.
               </p>
             </div>
           </div>

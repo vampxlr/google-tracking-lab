@@ -165,7 +165,12 @@ export async function GET() {
   const apiSecret = process.env.GA4_API_SECRET
 
   return NextResponse.json({
-    configured: Boolean(measurementId && apiSecret),
+    // Client-side (gtag.js) only needs Measurement ID
+    clientConfigured: Boolean(measurementId),
+    // Server-side (Measurement Protocol) needs both
+    serverConfigured: Boolean(measurementId && apiSecret),
+    // Overall configured if at least client is setup
+    configured: Boolean(measurementId),
     measurementId: measurementId ? `${measurementId.slice(0, 5)}...` : null,
     supportedEvents: SUPPORTED_EVENTS,
   })
