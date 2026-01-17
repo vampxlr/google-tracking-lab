@@ -319,6 +319,8 @@ export default function PlaygroundPage() {
         toast.success('GA4 Event Sent Successfully', {
           description: `Event "${eventName}" accepted by GA4 Measurement Protocol`,
         })
+        // Save test timestamp for setup status tracking
+        localStorage.setItem('last_ga4_test_time', new Date().toISOString())
       } else {
         toast.error('Failed to Send Event', {
           description: data.error || 'Unknown error',

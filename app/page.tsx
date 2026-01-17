@@ -1,6 +1,7 @@
 "use client"
 
 import { PageContent } from "@/components/page-content"
+import { SetupStatusPanel } from "@/components/setup-status-panel"
 import { 
   Target, 
   Server, 
@@ -23,6 +24,11 @@ export default function OverviewPage() {
       status="Stable"
     >
       
+      {/* Setup Status Panel */}
+      <div className="mb-12">
+        <SetupStatusPanel />
+      </div>
+
       {/* Hero Section with Animated Border */}
       <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="border-gradient">
