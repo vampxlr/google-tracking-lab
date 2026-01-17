@@ -582,7 +582,7 @@ export default function PlaygroundPage() {
               FIXED
             </Button>
             <Button
-              variant={mode === 'test' ? 'secondary' : 'outline'}
+              variant={mode === 'test' ? 'ghost' : 'outline'}
               onClick={() => setMode('test')}
               className="w-full font-mono"
               disabled={isLoading}

@@ -125,8 +125,8 @@ const config = {
           '100%': { transform: 'translateY(100%)' },
         },
         "pulse-glow": {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.5 },
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
         },
         "border-beam": {
           '0%': { 'offset-distance': '0%' },
