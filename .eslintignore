@@ -1,0 +1,10 @@
+# Build artifacts
+.next/
+node_modules/
+build/
+dist/
+
+# Ghost files potentially causing Vercel errors
+app/problems/
+app/capi-test/
+**/purchase-mismatch/
