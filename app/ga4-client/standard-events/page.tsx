@@ -25,14 +25,12 @@ export default function StandardEventsPage() {
       brokenPayload: {
         page_title: typeof document !== 'undefined' ? document.title : "Test Page",
         // Missing: page_location (required)
-        test_mode: "broken",
         note: "Missing page_location parameter"
       },
       fixedPayload: {
         page_location: typeof window !== 'undefined' ? window.location.href : "https://example.com/page",
         page_title: typeof document !== 'undefined' ? document.title : "Test Page",
-        page_referrer: typeof document !== 'undefined' ? document.referrer : "",
-        test_mode: "fixed"
+        page_referrer: typeof document !== 'undefined' ? document.referrer : ""
       }
     },
     {
@@ -41,12 +39,10 @@ export default function StandardEventsPage() {
       description: "New session begins",
       brokenPayload: {
         // Missing: engagement_time_msec
-        test_mode: "broken",
         note: "Missing engagement_time_msec parameter"
       },
       fixedPayload: {
-        engagement_time_msec: 100,
-        test_mode: "fixed"
+        engagement_time_msec: 100
       }
     },
     {
@@ -56,11 +52,9 @@ export default function StandardEventsPage() {
       brokenPayload: {
         // Wrong parameter name
         first_time: true,
-        test_mode: "broken",
         note: "Using incorrect custom parameters instead of standard ones"
       },
       fixedPayload: {
-        test_mode: "fixed"
       }
     },
     {
@@ -69,13 +63,11 @@ export default function StandardEventsPage() {
       description: "User engages with content",
       brokenPayload: {
         engagement_time_msec: "5500", // Wrong type: should be number
-        test_mode: "broken",
         note: "Wrong data type: engagement_time_msec should be number, not string"
       },
       fixedPayload: {
         engagement_time_msec: 5500,
-        session_id: "session_12345",
-        test_mode: "fixed"
+        session_id: "session_12345"
       }
     },
     {
@@ -85,13 +77,11 @@ export default function StandardEventsPage() {
       brokenPayload: {
         // Missing: search_term (required for search event)
         engagement_time_msec: 2000,
-        test_mode: "broken",
         note: "Missing required search_term parameter"
       },
       fixedPayload: {
         search_term: "blue widgets",
-        engagement_time_msec: 2000,
-        test_mode: "fixed"
+        engagement_time_msec: 2000
       }
     },
     {
@@ -102,15 +92,13 @@ export default function StandardEventsPage() {
         value: 50.00,
         // Missing: currency (required when value is provided)
         lead_type: "form_submission",
-        test_mode: "broken",
         note: "Missing currency parameter (required with value)"
       },
       fixedPayload: {
         currency: "USD",
         value: 50.00,
         lead_type: "form_submission",
-        form_id: "contact_form",
-        test_mode: "fixed"
+        form_id: "contact_form"
       }
     },
     {
@@ -121,14 +109,12 @@ export default function StandardEventsPage() {
         // Missing: method parameter
         value: 100,
         currency: "USD",
-        test_mode: "broken",
         note: "Missing method parameter (how user signed up)"
       },
       fixedPayload: {
         method: "email",
         value: 100,
-        currency: "USD",
-        test_mode: "fixed"
+        currency: "USD"
       }
     },
     {
@@ -137,12 +123,10 @@ export default function StandardEventsPage() {
       description: "User logs in",
       brokenPayload: {
         // Missing: method parameter
-        test_mode: "broken",
         note: "Missing method parameter (how user logged in)"
       },
       fixedPayload: {
-        method: "Google",
-        test_mode: "fixed"
+        method: "Google"
       }
     },
     {
@@ -153,7 +137,6 @@ export default function StandardEventsPage() {
         currency: "USD",
         value: 99.99,
         // Missing: items array (required for e-commerce events)
-        test_mode: "broken",
         note: "Missing items array (required for e-commerce events)"
       },
       fixedPayload: {
@@ -167,8 +150,7 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ],
-        test_mode: "fixed"
+        ]
       }
     },
     {
@@ -185,7 +167,6 @@ export default function StandardEventsPage() {
             // Missing: price, quantity
           }
         ],
-        test_mode: "broken",
         note: "Wrong value type (string) and missing item properties"
       },
       fixedPayload: {
@@ -199,8 +180,7 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ],
-        test_mode: "fixed"
+        ]
       }
     },
     {
@@ -217,7 +197,6 @@ export default function StandardEventsPage() {
             item_name: "Blue Widget"
           }
         ],
-        test_mode: "broken",
         note: "Missing transaction_id (critical for deduplication)"
       },
       fixedPayload: {
@@ -234,8 +213,7 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ],
-        test_mode: "fixed"
+        ]
       }
     },
     {
@@ -245,7 +223,6 @@ export default function StandardEventsPage() {
       brokenPayload: {
         currency: "USD",
         // Missing: items array
-        test_mode: "broken",
         note: "Missing items array (required to identify viewed item)"
       },
       fixedPayload: {
@@ -259,8 +236,7 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ],
-        test_mode: "fixed"
+        ]
       }
     },
     {
@@ -270,7 +246,6 @@ export default function StandardEventsPage() {
       brokenPayload: {
         item_list_name: "Widgets",
         // Missing: item_list_id and items array
-        test_mode: "broken",
         note: "Missing item_list_id and items array"
       },
       fixedPayload: {
@@ -297,8 +272,7 @@ export default function StandardEventsPage() {
             price: 89.99,
             quantity: 1
           }
-        ],
-        test_mode: "fixed"
+        ]
       }
     },
     {
@@ -313,7 +287,6 @@ export default function StandardEventsPage() {
             // Missing: item_list_id, item_list_name, index (required for select_item)
           }
         ],
-        test_mode: "broken",
         note: "Missing item_list_id, item_list_name, and index in items"
       },
       fixedPayload: {
@@ -330,8 +303,7 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ],
-        test_mode: "fixed"
+        ]
       }
     }
   ]

@@ -15,12 +15,11 @@ import {
   Activity,
   Code,
   Clock,
-  Globe,
   Server,
-  Zap,
-  Eye
+  Eye,
+  Edit,
+  Send
 } from "lucide-react"
-import { env } from "@/lib/env"
 
 interface LogEntry {
   id: string
@@ -70,14 +69,11 @@ export function EventPlayground({
   showLogs = true,
   sendToGA4 = true,
 }: EventPlaygroundProps) {
-  // Initialize mode to "fixed" if not showing mode toggle or if no broken payloads exist
-  const hasbrokenPayloads = events.some(e => e.brokenPayload)
-  const initialMode = (!showModeToggle || !hasbrokenPayloads) ? "fixed" : "broken"
-  
-  const [mode, setMode] = React.useState<"broken" | "fixed">(initialMode)
   const [logs, setLogs] = React.useState<LogEntry[]>([])
   const [isSending, setIsSending] = React.useState(false)
-  const [selectedEvent, setSelectedEvent] = React.useState<typeof events[0] | null>(null)
+  const [selectedEventName, setSelectedEventName] = React.useState<string>("")
+  const [editableJson, setEditableJson] = React.useState<string>("")
+  const [jsonError, setJsonError] = React.useState<string>("")
   const [requestDetails, setRequestDetails] = React.useState<RequestDetails | null>(null)
   const [responseDetails, setResponseDetails] = React.useState<ResponseDetails | null>(null)
   const scrollAreaRef = React.useRef<HTMLDivElement>(null)
@@ -93,32 +89,41 @@ export function EventPlayground({
     }
   }, [logs])
 
-  // Get current payload for selected event
-  const getCurrentPayload = () => {
-    if (!selectedEvent) return null
-    const payload = mode === "broken" && selectedEvent.brokenPayload 
-      ? selectedEvent.brokenPayload 
-      : selectedEvent.fixedPayload
-    return payload
+  // Handle event button click - just populate JSON editor
+  const handleEventClick = (event: typeof events[0]) => {
+    const payload = event.fixedPayload || {}
+    setSelectedEventName(event.name)
+    setEditableJson(JSON.stringify(payload, null, 2))
+    setJsonError("")
+    setRequestDetails(null)
+    setResponseDetails(null)
+  }
+
+  // Validate and parse JSON
+  const validateJson = (): any | null => {
+    try {
+      const parsed = JSON.parse(editableJson)
+      setJsonError("")
+      return parsed
+    } catch (error) {
+      setJsonError(error instanceof Error ? error.message : "Invalid JSON")
+      return null
+    }
   }
 
   const sendToClient = async (eventName: string, payload: any, eventId: string) => {
     const startTime = performance.now()
     
     try {
-      // Check if gtag is available
       if (typeof window !== 'undefined' && (window as any).gtag) {
         ;(window as any).gtag('event', eventName, payload)
-        
         const duration = performance.now() - startTime
-        
         return {
           success: true,
           duration,
           payload: { eventName, ...payload }
         }
       } else {
-        // gtag not loaded - simulate
         const duration = performance.now() - startTime + Math.random() * 100
         return {
           success: true,
@@ -142,11 +147,10 @@ export function EventPlayground({
     const requestBody = {
       event_name: eventName,
       parameters: payload,
-      mode: mode
+      mode: "fixed"
     }
 
     try {
-      // Set request details
       setRequestDetails({
         url: '/api/ga4/send',
         method: 'POST',
@@ -167,7 +171,6 @@ export function EventPlayground({
       const duration = performance.now() - startTime
       const data = await response.json()
 
-      // Set response details
       setResponseDetails({
         status: response.status,
         statusText: response.ok ? 'OK' : 'Error',
@@ -203,36 +206,44 @@ export function EventPlayground({
     }
   }
 
-  const sendEvent = async (event: typeof events[0]) => {
+  // Send the edited JSON
+  const handleSendRequest = async () => {
+    const payload = validateJson()
+    if (!payload) {
+      toast.error('Invalid JSON', {
+        description: jsonError,
+      })
+      return
+    }
+
+    if (!selectedEventName) {
+      toast.error('No event selected', {
+        description: 'Please select an event first',
+      })
+      return
+    }
+
     setIsSending(true)
-    setSelectedEvent(event)
-    setRequestDetails(null)
-    setResponseDetails(null)
-    
     const timestamp = new Date().toLocaleTimeString()
     const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
-    const payload = mode === "broken" && event.brokenPayload 
-      ? event.brokenPayload 
-      : event.fixedPayload
     
     try {
       let clientResult: any = null
       let serverResult: any = null
       
       // Send to Client-side
-      clientResult = await sendToClient(event.name, payload, eventId)
+      clientResult = await sendToClient(selectedEventName, payload, eventId)
       
       // Send to Server-side
       if (sendToGA4) {
-        serverResult = await sendToServer(event.name, payload)
+        serverResult = await sendToServer(selectedEventName, payload)
       }
       
       // Create log entry
       const newLog: LogEntry = {
         id: eventId,
         timestamp,
-        event: event.name,
+        event: selectedEventName,
         type: "server",
         payload,
         success: serverResult?.success || false,
@@ -244,11 +255,11 @@ export function EventPlayground({
       
       // Show success/error toast
       if (serverResult?.success || clientResult?.success) {
-        toast.success(`${event.name} Event Sent Successfully`, {
+        toast.success(`${selectedEventName} Event Sent Successfully`, {
           description: `Sent to Client & Server • ${Math.round(serverResult?.duration || clientResult?.duration)}ms`,
         })
       } else {
-        toast.error(`${event.name} Event Failed`, {
+        toast.error(`${selectedEventName} Event Failed`, {
           description: serverResult?.error || clientResult?.error || 'Unknown error',
         })
       }
@@ -265,6 +276,14 @@ export function EventPlayground({
   const clearLogs = () => {
     setLogs([])
     toast.info('Logs cleared')
+  }
+
+  const clearEditor = () => {
+    setEditableJson("")
+    setSelectedEventName("")
+    setJsonError("")
+    setRequestDetails(null)
+    setResponseDetails(null)
   }
 
   const copyToClipboard = (content: any) => {
@@ -295,58 +314,6 @@ export function EventPlayground({
           <p className="text-sm text-[#8b949e]">{description}</p>
         </div>
 
-        {/* Mode Toggle */}
-        {showModeToggle && (
-          <div className="rounded-lg border border-[#4285F4]/20 bg-gray-950 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-mono text-sm font-medium text-[#e8f4f8]">Event Mode</span>
-              <Badge 
-                variant="outline"
-                className={`font-mono ${
-                  mode === "fixed" 
-                    ? "bg-[#34A853]/10 text-[#34A853] border-[#34A853]/30" 
-                    : "bg-[#EA4335]/10 text-[#EA4335] border-[#EA4335]/30"
-                }`}
-              >
-                {mode === "broken" ? "Broken" : "Fixed"}
-              </Badge>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={mode === "broken" ? "default" : "outline"}
-                onClick={() => setMode("broken")}
-                className={`w-full font-mono text-xs ${
-                  mode === "broken" 
-                    ? "bg-[#EA4335]/20 text-[#EA4335] border-[#EA4335]/50 hover:bg-[#EA4335]/30" 
-                    : ""
-                }`}
-                size="sm"
-                disabled={isSending}
-              >
-                Broken
-              </Button>
-              <Button
-                variant={mode === "fixed" ? "default" : "outline"}
-                onClick={() => setMode("fixed")}
-                className={`w-full font-mono text-xs ${
-                  mode === "fixed" 
-                    ? "bg-[#34A853]/20 text-[#34A853] border-[#34A853]/50 hover:bg-[#34A853]/30" 
-                    : ""
-                }`}
-                size="sm"
-                disabled={isSending}
-              >
-                Fixed
-              </Button>
-            </div>
-            <p className="text-xs text-[#8b949e] mt-2">
-              {mode === "broken" 
-                ? "Events sent with missing or incorrect data" 
-                : "Events sent with proper structure and required fields"}
-            </p>
-          </div>
-        )}
-
         {/* Event Buttons */}
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -359,9 +326,13 @@ export function EventPlayground({
             {events.map((event, index) => (
               <button
                 key={index}
-                onClick={() => sendEvent(event)}
+                onClick={() => handleEventClick(event)}
                 disabled={isSending}
-                className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 text-left transition-all hover:border-[#FF6D00]/50 hover:bg-[#FF6D00]/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`rounded-lg border p-4 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  selectedEventName === event.name
+                    ? 'border-[#FF6D00] bg-[#FF6D00]/10'
+                    : 'border-gray-700 bg-gray-800/50 hover:border-[#FF6D00]/50 hover:bg-[#FF6D00]/5'
+                }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   {event.icon || <Activity className="h-4 w-4 text-[#4285F4]" />}
@@ -380,8 +351,93 @@ export function EventPlayground({
         </div>
       </div>
 
+      {/* JSON Builder (Editable) */}
+      {selectedEventName && (
+        <div className="rounded-xl border border-[#4285F4]/20 bg-gray-900/50">
+          <div className="border-b border-gray-800 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Edit className="h-4 w-4 text-[#4285F4]" />
+                <h4 className="font-mono text-sm font-medium text-[#4285F4]">JSON Builder</h4>
+                <Badge variant="outline" className="font-mono text-xs border-[#FF6D00]/30 text-[#FF6D00]">
+                  {selectedEventName}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(JSON.parse(editableJson || "{}"))}
+                  className="h-7 gap-1 font-mono text-xs"
+                  disabled={!!jsonError || !editableJson}
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearEditor}
+                  className="h-7 gap-1 font-mono text-xs"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Clear
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-3">
+            <p className="text-xs text-[#8b949e]">
+              Edit the JSON below to customize the event parameters. Click "Send Request" when ready.
+            </p>
+            
+            <div className="relative">
+              <textarea
+                value={editableJson}
+                onChange={(e) => {
+                  setEditableJson(e.target.value)
+                  setJsonError("")
+                }}
+                onBlur={validateJson}
+                className={`w-full font-mono text-xs bg-gray-950 rounded-lg p-4 border resize-y min-h-[200px] ${
+                  jsonError 
+                    ? 'border-[#EA4335]/50 text-[#EA4335] focus:border-[#EA4335] focus:ring-[#EA4335]/20' 
+                    : 'border-[#34A853]/20 text-[#34A853] focus:border-[#34A853] focus:ring-[#34A853]/20'
+                } focus:outline-none focus:ring-2`}
+                placeholder='{\n  "key": "value"\n}'
+                spellCheck={false}
+              />
+              {jsonError && (
+                <div className="mt-2 flex items-start gap-2 text-xs text-[#EA4335]">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>{jsonError}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleSendRequest}
+                disabled={isSending || !!jsonError || !editableJson}
+                className="bg-[#FF6D00]/20 text-[#FF6D00] border-[#FF6D00]/50 hover:bg-[#FF6D00]/30 font-mono text-sm"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isSending ? 'Sending...' : 'Send Request'}
+              </Button>
+              {isSending && (
+                <div className="flex items-center gap-2 text-xs text-[#8b949e]">
+                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-[#FF6D00] border-t-transparent"></div>
+                  <span>Sending event...</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Network Inspector */}
-      {(requestDetails || responseDetails || selectedEvent) && (
+      {(requestDetails || responseDetails) && (
         <div className="rounded-xl border border-[#4285F4]/20 bg-gray-900/50">
           <div className="border-b border-gray-800 p-4">
             <div className="flex items-center gap-2">
@@ -390,15 +446,9 @@ export function EventPlayground({
             </div>
           </div>
 
-          <Tabs defaultValue="json" className="w-full">
+          <Tabs defaultValue="request" className="w-full">
             <div className="border-b border-gray-800 px-4">
               <TabsList className="bg-transparent h-auto p-0 space-x-4">
-                <TabsTrigger 
-                  value="json" 
-                  className="font-mono text-xs data-[state=active]:border-b-2 data-[state=active]:border-[#FF6D00] rounded-none bg-transparent"
-                >
-                  Live JSON Build
-                </TabsTrigger>
                 <TabsTrigger 
                   value="request" 
                   className="font-mono text-xs data-[state=active]:border-b-2 data-[state=active]:border-[#FF6D00] rounded-none bg-transparent"
@@ -413,37 +463,6 @@ export function EventPlayground({
                 </TabsTrigger>
               </TabsList>
             </div>
-
-            {/* Live JSON Build */}
-            <TabsContent value="json" className="p-4 m-0">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-[#8b949e]">
-                    Current Event: <span className="text-[#FF6D00]">{selectedEvent?.name || 'None'}</span>
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(getCurrentPayload())}
-                    className="h-7 gap-1 font-mono text-xs"
-                  >
-                    <Copy className="h-3 w-3" />
-                    Copy
-                  </Button>
-                </div>
-                <div className="relative">
-                  <pre className="text-xs font-mono text-[#34A853] bg-gray-950 rounded-lg p-4 overflow-x-auto border border-[#34A853]/20">
-                    {JSON.stringify(getCurrentPayload(), null, 2)}
-                  </pre>
-                </div>
-                {selectedEvent && (
-                  <div className="text-xs text-[#8b949e] space-y-1">
-                    <p>Mode: <span className={mode === "fixed" ? "text-[#34A853]" : "text-[#EA4335]"}>{mode}</span></p>
-                    <p>This payload will be sent to GA4 Measurement Protocol</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
 
             {/* Request Details */}
             <TabsContent value="request" className="p-4 m-0">
@@ -476,14 +495,14 @@ export function EventPlayground({
 
                   <div>
                     <div className="font-mono text-xs font-medium text-[#e8f4f8] mb-2">Headers</div>
-                    <pre className="text-xs font-mono text-[#8b949e] bg-gray-950 rounded-lg p-3 overflow-x-auto border border-gray-700">
+                    <pre className="text-xs font-mono text-[#8b949e] bg-gray-950 rounded-lg p-3 border border-gray-700 break-all whitespace-pre-wrap">
                       {JSON.stringify(requestDetails.headers, null, 2)}
                     </pre>
                   </div>
 
                   <div>
                     <div className="font-mono text-xs font-medium text-[#e8f4f8] mb-2">Body</div>
-                    <pre className="text-xs font-mono text-[#34A853] bg-gray-950 rounded-lg p-3 overflow-x-auto border border-[#34A853]/20">
+                    <pre className="text-xs font-mono text-[#34A853] bg-gray-950 rounded-lg p-3 border border-[#34A853]/20 break-all whitespace-pre-wrap">
                       {JSON.stringify(requestDetails.body, null, 2)}
                     </pre>
                   </div>
@@ -532,7 +551,7 @@ export function EventPlayground({
 
                   <div>
                     <div className="font-mono text-xs font-medium text-[#e8f4f8] mb-2">Response Body</div>
-                    <pre className={`text-xs font-mono bg-gray-950 rounded-lg p-3 overflow-x-auto border ${
+                    <pre className={`text-xs font-mono bg-gray-950 rounded-lg p-3 border break-all whitespace-pre-wrap ${
                       responseDetails.status >= 200 && responseDetails.status < 300
                         ? 'text-[#34A853] border-[#34A853]/20'
                         : 'text-[#EA4335] border-[#EA4335]/20'
@@ -630,7 +649,7 @@ export function EventPlayground({
                       >
                         <Copy className="h-3 w-3 text-[#8b949e]" />
                       </button>
-                      <pre className="text-xs font-mono text-[#34A853] bg-gray-950 rounded p-3 pr-10 break-all whitespace-pre-wrap border border-[#34A853]/20">
+                      <pre className="text-xs font-mono text-[#34A853] bg-gray-950 rounded p-3 pr-10 border border-[#34A853]/20 break-all whitespace-pre-wrap">
                         {JSON.stringify(log.payload, null, 2)}
                       </pre>
                     </div>
@@ -648,7 +667,7 @@ export function EventPlayground({
                         >
                           <Copy className="h-3 w-3 text-[#8b949e]" />
                         </button>
-                        <pre className={`text-xs font-mono bg-gray-950 rounded p-3 pr-10 break-all whitespace-pre-wrap border ${
+                        <pre className={`text-xs font-mono bg-gray-950 rounded p-3 pr-10 border break-all whitespace-pre-wrap ${
                           log.success 
                             ? 'text-[#34A853] border-[#34A853]/20' 
                             : 'text-[#EA4335] border-[#EA4335]/20'
