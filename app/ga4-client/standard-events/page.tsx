@@ -22,77 +22,140 @@ export default function StandardEventsPage() {
       name: "page_view",
       icon: <Globe className="h-4 w-4 text-blue-500" />,
       description: "User views a page",
+      brokenPayload: {
+        page_title: typeof document !== 'undefined' ? document.title : "Test Page",
+        // Missing: page_location (required)
+        test_mode: "broken",
+        note: "Missing page_location parameter"
+      },
       fixedPayload: {
         page_location: typeof window !== 'undefined' ? window.location.href : "https://example.com/page",
         page_title: typeof document !== 'undefined' ? document.title : "Test Page",
-        page_referrer: typeof document !== 'undefined' ? document.referrer : ""
+        page_referrer: typeof document !== 'undefined' ? document.referrer : "",
+        test_mode: "fixed"
       }
     },
     {
       name: "session_start",
       icon: <Code className="h-4 w-4 text-green-500" />,
       description: "New session begins",
+      brokenPayload: {
+        // Missing: engagement_time_msec
+        test_mode: "broken",
+        note: "Missing engagement_time_msec parameter"
+      },
       fixedPayload: {
-        engagement_time_msec: 100
+        engagement_time_msec: 100,
+        test_mode: "fixed"
       }
     },
     {
       name: "first_visit",
       icon: <Share2 className="h-4 w-4 text-purple-500" />,
       description: "First time visitor",
-      fixedPayload: {}
+      brokenPayload: {
+        // Wrong parameter name
+        first_time: true,
+        test_mode: "broken",
+        note: "Using incorrect custom parameters instead of standard ones"
+      },
+      fixedPayload: {
+        test_mode: "fixed"
+      }
     },
     {
       name: "user_engagement",
       icon: <Heart className="h-4 w-4 text-red-500" />,
       description: "User engages with content",
+      brokenPayload: {
+        engagement_time_msec: "5500", // Wrong type: should be number
+        test_mode: "broken",
+        note: "Wrong data type: engagement_time_msec should be number, not string"
+      },
       fixedPayload: {
         engagement_time_msec: 5500,
-        session_id: "session_12345"
+        session_id: "session_12345",
+        test_mode: "fixed"
       }
     },
     {
       name: "search",
       icon: <Search className="h-4 w-4 text-orange-500" />,
       description: "User searches on site",
+      brokenPayload: {
+        // Missing: search_term (required for search event)
+        engagement_time_msec: 2000,
+        test_mode: "broken",
+        note: "Missing required search_term parameter"
+      },
       fixedPayload: {
         search_term: "blue widgets",
-        engagement_time_msec: 2000
+        engagement_time_msec: 2000,
+        test_mode: "fixed"
       }
     },
     {
       name: "generate_lead",
       icon: <Code className="h-4 w-4 text-cyan-500" />,
       description: "Lead generation event",
+      brokenPayload: {
+        value: 50.00,
+        // Missing: currency (required when value is provided)
+        lead_type: "form_submission",
+        test_mode: "broken",
+        note: "Missing currency parameter (required with value)"
+      },
       fixedPayload: {
         currency: "USD",
         value: 50.00,
         lead_type: "form_submission",
-        form_id: "contact_form"
+        form_id: "contact_form",
+        test_mode: "fixed"
       }
     },
     {
       name: "sign_up",
       icon: <LogIn className="h-4 w-4 text-pink-500" />,
       description: "User creates account",
+      brokenPayload: {
+        // Missing: method parameter
+        value: 100,
+        currency: "USD",
+        test_mode: "broken",
+        note: "Missing method parameter (how user signed up)"
+      },
       fixedPayload: {
         method: "email",
         value: 100,
-        currency: "USD"
+        currency: "USD",
+        test_mode: "fixed"
       }
     },
     {
       name: "login",
       icon: <LogIn className="h-4 w-4 text-yellow-500" />,
       description: "User logs in",
+      brokenPayload: {
+        // Missing: method parameter
+        test_mode: "broken",
+        note: "Missing method parameter (how user logged in)"
+      },
       fixedPayload: {
-        method: "Google"
+        method: "Google",
+        test_mode: "fixed"
       }
     },
     {
       name: "add_to_cart",
       icon: <ShoppingCart className="h-4 w-4 text-indigo-500" />,
       description: "Item added to cart",
+      brokenPayload: {
+        currency: "USD",
+        value: 99.99,
+        // Missing: items array (required for e-commerce events)
+        test_mode: "broken",
+        note: "Missing items array (required for e-commerce events)"
+      },
       fixedPayload: {
         currency: "USD",
         value: 99.99,
@@ -104,13 +167,27 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ]
+        ],
+        test_mode: "fixed"
       }
     },
     {
       name: "begin_checkout",
       icon: <ArrowRight className="h-4 w-4 text-teal-500" />,
       description: "Checkout process starts",
+      brokenPayload: {
+        value: "99.99", // Wrong type: should be number
+        currency: "USD",
+        items: [
+          {
+            item_id: "123",
+            item_name: "Blue Widget"
+            // Missing: price, quantity
+          }
+        ],
+        test_mode: "broken",
+        note: "Wrong value type (string) and missing item properties"
+      },
       fixedPayload: {
         currency: "USD",
         value: 99.99,
@@ -122,13 +199,27 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ]
+        ],
+        test_mode: "fixed"
       }
     },
     {
       name: "purchase",
       icon: <ShoppingCart className="h-4 w-4 text-emerald-500" />,
       description: "Purchase completed",
+      brokenPayload: {
+        // Missing: transaction_id (critical for purchase events)
+        value: 149.99,
+        currency: "USD",
+        items: [
+          {
+            item_id: "123",
+            item_name: "Blue Widget"
+          }
+        ],
+        test_mode: "broken",
+        note: "Missing transaction_id (critical for deduplication)"
+      },
       fixedPayload: {
         transaction_id: "T_123456789",
         value: 149.99,
@@ -143,13 +234,20 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ]
+        ],
+        test_mode: "fixed"
       }
     },
     {
       name: "view_item",
       icon: <BookOpen className="h-4 w-4 text-sky-500" />,
       description: "Product page view",
+      brokenPayload: {
+        currency: "USD",
+        // Missing: items array
+        test_mode: "broken",
+        note: "Missing items array (required to identify viewed item)"
+      },
       fixedPayload: {
         currency: "USD",
         value: 99.99,
@@ -161,13 +259,20 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ]
+        ],
+        test_mode: "fixed"
       }
     },
     {
       name: "view_item_list",
       icon: <ShoppingCart className="h-4 w-4 text-rose-500" />,
       description: "Product list view",
+      brokenPayload: {
+        item_list_name: "Widgets",
+        // Missing: item_list_id and items array
+        test_mode: "broken",
+        note: "Missing item_list_id and items array"
+      },
       fixedPayload: {
         item_list_id: "category_123",
         item_list_name: "Widgets",
@@ -192,13 +297,25 @@ export default function StandardEventsPage() {
             price: 89.99,
             quantity: 1
           }
-        ]
+        ],
+        test_mode: "fixed"
       }
     },
     {
       name: "select_item",
       icon: <BookOpen className="h-4 w-4 text-amber-500" />,
       description: "Item selected from list",
+      brokenPayload: {
+        items: [
+          {
+            item_id: "123",
+            item_name: "Blue Widget"
+            // Missing: item_list_id, item_list_name, index (required for select_item)
+          }
+        ],
+        test_mode: "broken",
+        note: "Missing item_list_id, item_list_name, and index in items"
+      },
       fixedPayload: {
         item_list_id: "category_123",
         item_list_name: "Widgets",
@@ -213,7 +330,8 @@ export default function StandardEventsPage() {
             price: 99.99,
             quantity: 1
           }
-        ]
+        ],
+        test_mode: "fixed"
       }
     }
   ]
