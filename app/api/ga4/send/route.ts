@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 // GA4 Event Names (Standard Events)
 const SUPPORTED_EVENTS = [
   'page_view',
+  'session_start',
+  'first_visit',
+  'user_engagement',
   'search',
   'sign_up',
   'login',
